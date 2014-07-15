@@ -35,6 +35,17 @@ from tempest_report.discover import customized_tempest_conf
 from tempest_report import settings
 
 
+def load_excluded_tests(fname):
+    """ Load the excluded tests form a flat file."""
+    with open(fname, encoding='utf-8').readlines() as excluded_tests:
+        return excluded_tests
+
+
+def exclude_tests(all_tests, excluded_tests):
+    """ Drop tests that we want to exclude and return a list.."""
+    return ' '.join([i for i in all_tests if i not in excluded_tests]).split()
+
+
 def create_tenant_and_user(username, password, auth_url, tenant_name):
     keystone = keystoneclient.v2_0.client.Client(username=username,
                                                  password=password,
@@ -252,7 +263,10 @@ def main(options):
                 all_tests.append(test)
     else:
         packages = pkgutil.walk_packages(tempest.__path__, prefix="tempest.")
-        for _importer, testname, _ispkg in packages:
+        EXCLUDE = load_excluded_tests(options.exclude)
+        tests_list = exclude_tests(packages, EXCLUDE)
+
+        for _importer, testname, _ispkg in tests_list:
             if "test_" in testname:
                 queue.put((testname, configfile.name))
                 all_tests.append(testname)
